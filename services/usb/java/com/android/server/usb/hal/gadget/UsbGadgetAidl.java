@@ -63,6 +63,7 @@ public final class UsbGadgetAidl implements UsbGadgetHal {
                 throw new RemoteException("IUsb not initialized yet");
             }
         }
+
         Slog.i(TAG, "USB Gadget HAL AIDL version: GADGET_HAL_V2_0");
         return GADGET_HAL_V2_0;
     }
@@ -93,7 +94,7 @@ public final class UsbGadgetAidl implements UsbGadgetHal {
 
     static boolean isServicePresent(IndentingPrintWriter pw) {
         try {
-            return ServiceManager.isDeclared(USB_GADGET_AIDL_SERVICE);
+            return ServiceManager.checkService(USB_GADGET_AIDL_SERVICE) != null;
         } catch (NoSuchElementException e) {
             logAndPrintException(pw, "connectToProxy: usb gadget Aidl hal service not found.", e);
         }
@@ -249,4 +250,3 @@ public final class UsbGadgetAidl implements UsbGadgetHal {
         }
     }
 }
-
