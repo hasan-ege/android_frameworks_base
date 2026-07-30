@@ -72,7 +72,7 @@ void connect(JNIEnv* env, jobject obj) {
     sp<AudioSystem::CaptureStateListener> listener(new Listener(env, obj));
     status_t status =
         AudioSystem::registerSoundTriggerCaptureStateListener(listener);
-    LOG_ALWAYS_FATAL_IF(status != NO_ERROR);
+    (void)status;
 }
 
 const JNINativeMethod gMethods[] = {

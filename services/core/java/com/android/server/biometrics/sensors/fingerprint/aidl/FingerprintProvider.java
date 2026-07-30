@@ -943,6 +943,18 @@ public class FingerprintProvider implements IBinder.DeathRecipient, ServiceProvi
     private List<SensorLocationInternal> getWorkaroundSensorProps(@NonNull Context context) {
         final List<SensorLocationInternal> sensorLocations = new ArrayList<>();
 
+        // metroid: allow overriding the UDFPS location for AIDL HALs that report coordinates
+        // in the wrong display-resolution space (Nothing fp HAL reports 1080p-space values).
+        // Uses the HIDL-style int array [x, y, radius]; deliberately NOT config_sfps_sensor_props,
+        // which SystemUI's SideFps OverlapDetector also consumes (crashes on it).
+        final int[] udfpsProps = context.getResources().getIntArray(
+                com.android.internal.R.array.config_udfps_sensor_props);
+        if (udfpsProps.length == 3) {
+            sensorLocations.add(new SensorLocationInternal(
+                    "" /* default display */, udfpsProps[0], udfpsProps[1], udfpsProps[2]));
+            return sensorLocations;
+        }
+
         final TypedArray sfpsProps = context.getResources().obtainTypedArray(
                 com.android.internal.R.array.config_sfps_sensor_props);
         for (int i = 0; i < sfpsProps.length(); i++) {
