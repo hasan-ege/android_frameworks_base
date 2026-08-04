@@ -156,9 +156,9 @@ constructor(
                             Math.max(it.x, displayMetrics.widthPixels - it.x),
                             Math.max(it.y, displayMetrics.heightPixels - it.y),
                         ),
-                    )
+                )
                 logger.showingUnlockRippleAt(it.x, it.y, "FP sensor radius: $udfpsRadius")
-                showUnlockedRipple()
+                showUnlockedRipple(showVisualRipple = false)
             }
         } else if (biometricSourceType == BiometricSourceType.FACE) {
             faceSensorLocation?.let {
@@ -174,13 +174,17 @@ constructor(
                         ),
                     )
                 logger.showingUnlockRippleAt(it.x, it.y, "Face unlock ripple")
-                showUnlockedRipple()
+                showUnlockedRipple(showVisualRipple = true)
             }
         }
     }
 
-    private fun showUnlockedRipple() {
+    private fun showUnlockedRipple(showVisualRipple: Boolean) {
         if (!isRippleEnabled) return
+
+        // Nothing's stock SystemUI suppresses the full-screen fingerprint authentication ripple.
+        // Keeping it open through keyguard dismissal leaves black system-bar regions on metroid.
+        if (!showVisualRipple) return
 
         notificationShadeWindowController.setForcePluginOpen(true, this)
 
@@ -404,7 +408,7 @@ constructor(
                             authRippleInteractor.sendAdbCommand(null)
                         } else {
                             mView.setSensorLocation(Point(args[1].toInt(), args[2].toInt()))
-                            showUnlockedRipple()
+                            showUnlockedRipple(showVisualRipple = true)
                         }
                     }
 
