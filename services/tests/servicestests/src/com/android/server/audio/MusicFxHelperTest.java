@@ -42,6 +42,7 @@ import org.junit.runner.RunWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.mockito.ArgumentCaptor;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -59,7 +60,9 @@ public class MusicFxHelperTest {
     private ResolveInfo mResolveInfo2 = new ResolveInfo();
     private final String mTestPkg1 = new String("testPkg1"), mTestPkg2 = new String("testPkg2"),
             mTestPkg3 = new String("testPkg3"), mTestPkg1Equivalent = new String("testPkg1");
-    private final String mMusicFxPkgName = new String("com.android.musicfx");
+    private final String mMusicFxPkgName = new String("org.lineageos.audiofx");
+    private static final String MUSIC_FX_KEEPALIVE =
+            "org.lineageos.audiofx.service.KeepAliveService";
     private final int mTestUid1 = 1, mTestUid2 = 2, mTestUid3 = 3, mMusicFxUid = 78;
     private final int mTestSession1 = 11, mTestSession2 = 22, mTestSession3 = 33;
 
@@ -124,6 +127,15 @@ public class MusicFxHelperTest {
         mMusicFxHelper.handleAudioEffectBroadcast(mMockContext, intent);
         verify(mMockContext, times(bind))
                 .bindServiceAsUser(any(), any(), anyInt(), any());
+        if (bind > 0) {
+            final ArgumentCaptor<Intent> bindIntent = ArgumentCaptor.forClass(Intent.class);
+            verify(mMockContext, times(bind))
+                    .bindServiceAsUser(bindIntent.capture(), any(), anyInt(), any());
+            Assert.assertEquals(mMusicFxPkgName,
+                    bindIntent.getValue().getComponent().getPackageName());
+            Assert.assertEquals(MUSIC_FX_KEEPALIVE,
+                    bindIntent.getValue().getComponent().getClassName());
+        }
         verify(mMockContext, times(broadcast)).sendBroadcastAsUser(any(), any());
     }
 

@@ -63,7 +63,7 @@ public class MusicFxHelper {
 
     private final String mPackageName = this.getClass().getPackage().getName();
 
-    private final String mMusicFxPackageName = "com.android.musicfx";
+    private final String mMusicFxPackageName = "org.lineageos.audiofx";
 
     /*package*/ static final int MSG_EFFECT_CLIENT_GONE = MUSICFX_HELPER_MSG_START + 1;
 
@@ -110,7 +110,7 @@ public class MusicFxHelper {
                 }
                 if (procState > ActivityManager.PROCESS_STATE_IMPORTANT_FOREGROUND) {
                     Intent bindIntent = new Intent().setClassName(mMusicFxPackageName,
-                            "com.android.musicfx.KeepAliveService");
+                            "org.lineageos.audiofx.service.KeepAliveService");
                     mIsBound = true;
                     mContext.bindServiceAsUser(
                             bindIntent, mMusicFxBindConnection, Context.BIND_AUTO_CREATE,
