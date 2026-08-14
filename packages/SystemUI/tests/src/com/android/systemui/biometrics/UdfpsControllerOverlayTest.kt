@@ -32,6 +32,7 @@ import com.android.keyguard.KeyguardUpdateMonitor
 import com.android.systemui.SysuiTestCase
 import com.android.systemui.biometrics.domain.interactor.UdfpsOverlayInteractor
 import com.android.systemui.biometrics.shared.model.UdfpsOverlayParams
+import com.android.systemui.biometrics.ui.view.UdfpsTouchOverlay
 import com.android.systemui.biometrics.ui.viewmodel.DefaultUdfpsTouchOverlayViewModel
 import com.android.systemui.biometrics.ui.viewmodel.DeviceEntryUdfpsTouchOverlayViewModel
 import com.android.systemui.biometrics.ui.viewmodel.PromptUdfpsTouchOverlayViewModel
@@ -47,6 +48,7 @@ import com.android.systemui.power.domain.interactor.PowerInteractor
 import com.android.systemui.power.domain.interactor.powerInteractor
 import com.android.systemui.power.shared.model.WakeSleepReason
 import com.android.systemui.power.shared.model.WakefulnessState
+import com.android.systemui.res.R
 import com.android.systemui.shade.domain.interactor.ShadeInteractor
 import com.android.systemui.statusbar.policy.KeyguardStateController
 import com.android.systemui.testKosmos
@@ -62,6 +64,7 @@ import org.mockito.ArgumentMatchers.any
 import org.mockito.ArgumentMatchers.eq
 import org.mockito.Mock
 import org.mockito.Mockito.never
+import org.mockito.Mockito.inOrder
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.`when` as whenever
 import org.mockito.junit.MockitoJUnit
@@ -82,6 +85,8 @@ class UdfpsControllerOverlayTest : SysuiTestCase() {
     @Mock private lateinit var keyguardUpdateMonitor: KeyguardUpdateMonitor
     @Mock private lateinit var keyguardStateController: KeyguardStateController
     @Mock private lateinit var udfpsDisplayMode: UdfpsDisplayModeProvider
+    @Mock private lateinit var authController: AuthController
+    @Mock private lateinit var touchOverlay: UdfpsTouchOverlay
     @Mock private lateinit var controllerCallback: IUdfpsOverlayControllerCallback
     @Mock
     private lateinit var deviceEntryUdfpsTouchOverlayViewModel:
@@ -107,6 +112,8 @@ class UdfpsControllerOverlayTest : SysuiTestCase() {
         powerInteractor = kosmos.powerInteractor
         keyguardTransitionRepository = kosmos.fakeKeyguardTransitionRepository
         keyguardTransitionInteractor = kosmos.keyguardTransitionInteractor
+        whenever(inflater.inflate(R.layout.udfps_touch_overlay, null, false))
+            .thenReturn(touchOverlay)
     }
 
     private suspend fun withReasonSuspend(@RequestReason reason: Int, block: suspend () -> Unit) {
@@ -124,6 +131,7 @@ class UdfpsControllerOverlayTest : SysuiTestCase() {
                 keyguardUpdateMonitor,
                 keyguardStateController,
                 udfpsDisplayMode,
+                authController,
                 REQUEST_ID,
                 reason,
                 controllerCallback,
@@ -219,6 +227,38 @@ class UdfpsControllerOverlayTest : SysuiTestCase() {
             controllerOverlay.cancel()
             verify(controllerCallback).onUserCanceled()
         }
+
+    @Test
+    fun maxRefreshRate_enabled_requestsForOverlayLifetime() {
+        context
+            .getOrCreateTestableResources()
+            .addOverride(R.bool.config_udfpsOverlayMaxRefreshRate, true)
+        withReason(REASON_AUTH_BP) {
+            assertThat(controllerOverlay.show(overlayParams)).isTrue()
+            assertThat(controllerOverlay.hide()).isTrue()
+
+            val order = inOrder(authController)
+            order.verify(authController).requestMaxRefreshRate(true)
+            order.verify(authController).requestMaxRefreshRate(false)
+        }
+    }
+
+    @Test
+    fun maxRefreshRate_enabled_failedShowReleasesVote() {
+        context
+            .getOrCreateTestableResources()
+            .addOverride(R.bool.config_udfpsOverlayMaxRefreshRate, true)
+        whenever(inflater.inflate(R.layout.udfps_touch_overlay, null, false))
+            .thenThrow(RuntimeException("test"))
+        withReason(REASON_AUTH_BP) {
+            assertThat(controllerOverlay.show(overlayParams)).isFalse()
+
+            val order = inOrder(authController)
+            order.verify(authController).requestMaxRefreshRate(true)
+            order.verify(authController).requestMaxRefreshRate(false)
+            assertThat(controllerOverlay.isShowing).isFalse()
+        }
+    }
 
     @Test
     fun matchesRequestIds() =

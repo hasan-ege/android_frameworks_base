@@ -81,6 +81,7 @@ constructor(
     private val keyguardUpdateMonitor: KeyguardUpdateMonitor,
     private val keyguardStateController: KeyguardStateController,
     private var udfpsDisplayModeProvider: UdfpsDisplayModeProvider,
+    private val authController: AuthController,
     val requestId: Long,
     @RequestReason val requestReason: Int,
     private val controllerCallback: IUdfpsOverlayControllerCallback,
@@ -123,6 +124,9 @@ constructor(
     private val useFrameworkDimming = context.resources.getBoolean(
         com.android.systemui.res.R.bool.config_udfpsFrameworkDimming
     )
+    private val requestMaxRefreshRateForOverlay =
+        context.resources.getBoolean(R.bool.config_udfpsOverlayMaxRefreshRate)
+    private var maxRefreshRateRequested = false
 
     private val udfpsHelper: UdfpsHelper? = if (useFrameworkDimming) {
         UdfpsHelper(context, windowManager, shadeInteractor, requestReason,
@@ -176,6 +180,9 @@ constructor(
     @SuppressLint("ClickableViewAccessibility")
     fun show(params: UdfpsOverlayParams, attachListener: OnAttachStateChangeListener?): Boolean {
         if (getTouchOverlay() == null) {
+            if (!requestMaxRefreshRate()) {
+                return false
+            }
             overlayParams = params
             overlayAttachStateListener = attachListener
             sensorBounds = Rect(params.sensorBounds)
@@ -250,6 +257,11 @@ constructor(
                 }
             } catch (e: RuntimeException) {
                 Log.e(TAG, "showUdfpsOverlay | failed to add window", e)
+                overlayTouchView = null
+                addViewRunnable = null
+                listenForCurrentKeyguardState?.cancel()
+                releaseMaxRefreshRate()
+                return false
             }
             return true
         }
@@ -332,8 +344,37 @@ constructor(
         overlayTouchView = null
         overlayTouchListener = null
         listenForCurrentKeyguardState?.cancel()
+        releaseMaxRefreshRate()
 
         return wasShowing
+    }
+
+    private fun requestMaxRefreshRate(): Boolean {
+        if (!requestMaxRefreshRateForOverlay || maxRefreshRateRequested) {
+            return true
+        }
+
+        return try {
+            authController.requestMaxRefreshRate(true)
+            maxRefreshRateRequested = true
+            true
+        } catch (e: RemoteException) {
+            Log.e(TAG, "Failed to request max refresh rate", e)
+            false
+        }
+    }
+
+    private fun releaseMaxRefreshRate() {
+        if (!maxRefreshRateRequested) {
+            return
+        }
+
+        maxRefreshRateRequested = false
+        try {
+            authController.requestMaxRefreshRate(false)
+        } catch (e: RemoteException) {
+            Log.e(TAG, "Failed to release max refresh rate", e)
+        }
     }
 
     /** Cancel this request. */

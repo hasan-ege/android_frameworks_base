@@ -306,6 +306,7 @@ public class AuthController implements
         mUdfpsProps = !udfpsProps.isEmpty() ? udfpsProps : null;
         if (mUdfpsProps != null) {
             mUdfpsController = mUdfpsControllerFactory.get();
+            mUdfpsController.setAuthController(this);
             mUdfpsController.addCallback(new UdfpsController.Callback() {
                 @Override
                 public void onFingerUp() {
