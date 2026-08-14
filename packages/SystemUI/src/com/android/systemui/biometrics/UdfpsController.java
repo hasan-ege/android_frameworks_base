@@ -211,6 +211,11 @@ public class UdfpsController implements DozeReceiver, Dumpable {
     // TODO(b/229290039): UDFPS controller should manage its dimensions on its own. Remove this.
     @Nullable private Runnable mAuthControllerUpdateUdfpsLocation;
     @Nullable private UdfpsDisplayModeProvider mUdfpsDisplayMode;
+    @Nullable private AuthController mAuthController;
+
+    public void setAuthController(@NonNull AuthController authController) {
+        mAuthController = authController;
+    }
 
     // The ID of the pointer for which ACTION_DOWN has occurred. -1 means no pointer is active.
     private int mActivePointerId = MotionEvent.INVALID_POINTER_ID;
@@ -374,6 +379,7 @@ public class UdfpsController implements DozeReceiver, Dumpable {
                         mKeyguardUpdateMonitor,
                         mKeyguardStateController,
                         mUdfpsDisplayMode,
+                        checkNotNull(mAuthController),
                         requestId,
                         reason,
                         callback,

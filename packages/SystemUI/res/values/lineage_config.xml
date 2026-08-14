@@ -21,6 +21,9 @@
     <!-- Whether to enable framework dimming for UDFPS -->
     <bool name="config_udfpsFrameworkDimming">false</bool>
 
+    <!-- Whether to hold maximum refresh rate for the full UDFPS overlay lifetime. -->
+    <bool name="config_udfpsOverlayMaxRefreshRate">false</bool>
+
     <!-- Brightness-to-alpha lookup table (LUT) for UDFPS framework dimming.
          Each entry is in the format <brightness>,<alpha> where:
            - brightness = panel backlight level
