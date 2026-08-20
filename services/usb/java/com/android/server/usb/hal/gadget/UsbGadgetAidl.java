@@ -50,6 +50,8 @@ public final class UsbGadgetAidl implements UsbGadgetHal {
     // Proxy object for the usb gadget hal daemon.
     @GuardedBy("mGadgetProxyLock")
     private IUsbGadget mGadgetProxy;
+    @GuardedBy("mGadgetProxyLock")
+    private IBinder mGadgetBinder;
     private final UsbDeviceManager mDeviceManager;
     public final IndentingPrintWriter mPw;
     // Mutex for all mutable shared state.
@@ -72,8 +74,16 @@ public final class UsbGadgetAidl implements UsbGadgetHal {
         logAndPrint(Log.ERROR, mPw, "Usb Gadget AIDL hal service died");
         synchronized (mGadgetProxyLock) {
             mGadgetProxy = null;
+            mGadgetBinder = null;
         }
         connectToProxy(null);
+        synchronized (mGadgetProxyLock) {
+            if (mGadgetProxy == null) {
+                return;
+            }
+        }
+        mDeviceManager.setCurrentFunctions(mDeviceManager.getCurrentFunctions(),
+                ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE));
     }
 
     private void connectToProxy(IndentingPrintWriter pw) {
@@ -83,11 +93,17 @@ public final class UsbGadgetAidl implements UsbGadgetHal {
             }
 
             try {
-                mGadgetProxy = IUsbGadget.Stub.asInterface(
-                        ServiceManager.waitForService(USB_GADGET_AIDL_SERVICE));
+                mGadgetBinder = ServiceManager.waitForService(USB_GADGET_AIDL_SERVICE);
+                mGadgetProxy = IUsbGadget.Stub.asInterface(mGadgetBinder);
+                mGadgetBinder.linkToDeath(this::serviceDied, 0);
             } catch (NoSuchElementException e) {
                 logAndPrintException(pw, "connectToProxy: usb gadget hal service not found."
                         + " Did the service fail to start?", e);
+            } catch (RemoteException e) {
+                mGadgetBinder = null;
+                mGadgetProxy = null;
+                logAndPrintException(pw, "connectToProxy: usb gadget hal service not responding",
+                        e);
             }
         }
     }
