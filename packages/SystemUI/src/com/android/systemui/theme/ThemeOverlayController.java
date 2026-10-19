@@ -730,6 +730,9 @@ public class ThemeOverlayController implements CoreStartable, Dumpable {
                 luminanceFactor, chromaFactor, wholePalette, tintBg, bgColor);
         mColorScheme = isNightMode() ? mDarkColorScheme : mLightColorScheme;
 
+        mBlackSurfaces = LineageSettings.Secure.getIntForUser(mContext.getContentResolver(),
+                LineageSettings.Secure.BERRY_BLACK_THEME, 0, mUserTracker.getUserId()) == 1;
+
         mAccentOverlay = newFabricatedOverlay("accent");
         assignColorsToOverlay(mAccentOverlay, DynamicColors.getAllAccentPalette(luminanceFactor, chromaFactor, wholePalette));
 
@@ -756,10 +759,30 @@ public class ThemeOverlayController implements CoreStartable, Dumpable {
 
             overlay.setResourceValue(prefix + "_light", TYPE_INT_COLOR_ARGB8,
                     p.second.getArgb(mLightColorScheme.getMaterialScheme()), null);
+            Integer black = mBlackSurfaces ? BLACK_SURFACES.get(p.first) : null;
             overlay.setResourceValue(prefix + "_dark", TYPE_INT_COLOR_ARGB8,
-                    p.second.getArgb(mDarkColorScheme.getMaterialScheme()), null);
+                    black != null ? black : p.second.getArgb(mDarkColorScheme.getMaterialScheme()),
+                    null);
         });
     }
+
+    /**
+     * Black theme, dark side: Material 3 surfaces (the shade, Quick Settings, settings pages,
+     * cards) come from these dynamic colors rather than the neutral palette, so they are made
+     * pure black for AMOLED, with the upper container levels a hair lighter so cards still
+     * stand apart.
+     */
+    private boolean mBlackSurfaces;
+    private static final java.util.Map<String, Integer> BLACK_SURFACES = java.util.Map.of(
+            "background", 0xFF000000,
+            "surface", 0xFF000000,
+            "surface_dim", 0xFF000000,
+            "surface_container_lowest", 0xFF000000,
+            "surface_container_low", 0xFF000000,
+            "surface_container", 0xFF050505,
+            "surface_container_high", 0xFF0D0D0D,
+            "surface_container_highest", 0xFF161616,
+            "surface_bright", 0xFF1E1E1E);
 
     /**
      * Checks if the color scheme in mColorScheme matches the current system palettes.
