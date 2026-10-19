@@ -116,6 +116,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.ApplicationInfo;
+import com.android.server.pm.pkg.AndroidPackage;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManagerInternal;
@@ -1435,9 +1436,38 @@ public class ActivityTaskSupervisor implements RecentTasks.Callbacks {
         return mBalController;
     }
 
+    private static final String MICROG_PACKAGE = "com.google.android.gms";
+    private static final String MICROG_OVERRIDE_CONSENT =
+            "org.microg.gms.auth.AskPackageOverrideActivity";
+    /** SHA-256 of microG's signing certificate (O=NOGAPPS Project, C=DE). */
+    private static final byte[] MICROG_CERT_SHA256 = libcore.util.HexEncoding.decode(
+            "9bd06727e62796c0130eb6dab39b73157451582cbd138e86c468acc395d14165");
+
+    /**
+     * microG's account authenticator answers a token request made on behalf of another app
+     * (Aurora Store asking as the Play Store) with its consent screen, for AccountManager to
+     * start from the requesting app. That activity is not exported, so the start always failed
+     * and the sign-in with it. Only this one activity of the system's own microG, checked by
+     * its signing certificate, may be started by other apps.
+     */
+    private boolean isMicrogOverrideConsent(ActivityInfo activityInfo) {
+        if (!MICROG_PACKAGE.equals(activityInfo.packageName)
+                || !MICROG_OVERRIDE_CONSENT.equals(activityInfo.name)
+                || activityInfo.applicationInfo == null
+                || (activityInfo.applicationInfo.flags & ApplicationInfo.FLAG_SYSTEM) == 0) {
+            return false;
+        }
+        final AndroidPackage pkg =
+                mService.getPackageManagerInternalLocked().getPackage(MICROG_PACKAGE);
+        return pkg != null && pkg.getSigningDetails().hasSha256Certificate(MICROG_CERT_SHA256);
+    }
+
     private int getComponentRestrictionForCallingPackage(ActivityInfo activityInfo,
             String callingPackage, @Nullable String callingFeatureId, int callingPid,
             int callingUid, boolean ignoreTargetSecurity) {
+        if (isMicrogOverrideConsent(activityInfo)) {
+            return ACTIVITY_RESTRICTION_NONE;
+        }
         if (!ignoreTargetSecurity && mService.checkComponentPermission(activityInfo.permission,
                 callingPid, callingUid, activityInfo.getUid(), activityInfo.exported)
                 == PERMISSION_DENIED) {
