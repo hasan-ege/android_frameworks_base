@@ -395,6 +395,7 @@ public final class DisplayPowerProximityStateController {
                 mIgnoreProximityUntilChanged = false;
                 mSensorManager.registerListener(mProximitySensorListener, mProximitySensor,
                         SensorManager.SENSOR_DELAY_NORMAL, mHandler);
+                NtProximityNotifier.notify(true);
             }
         } else {
             if (mProximitySensorEnabled) {
@@ -406,6 +407,7 @@ public final class DisplayPowerProximityStateController {
                 mPendingProximity = PROXIMITY_UNKNOWN;
                 mHandler.removeMessages(MSG_PROXIMITY_SENSOR_DEBOUNCED);
                 mSensorManager.unregisterListener(mProximitySensorListener);
+                NtProximityNotifier.notify(false);
                 // release wake lock(must be last)
                 boolean proxDebounceSuspendBlockerReleased =
                         mWakelockController.releaseWakelock(
