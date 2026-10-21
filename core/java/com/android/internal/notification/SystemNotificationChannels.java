@@ -60,6 +60,8 @@ public class SystemNotificationChannels {
     public static final String ALERTS = "ALERTS";
     public static final String RETAIL_MODE = "RETAIL_MODE";
     public static final String USB = "USB";
+    /** "Use USB for": asked when the phone is plugged into a computer (heads-up). */
+    public static final String USB_PROMPT = "USB_PROMPT";
     public static final String FOREGROUND_SERVICE = "FOREGROUND_SERVICE";
     public static final String HEAVY_WEIGHT_APP = "HEAVY_WEIGHT_APP";
     /**
@@ -178,6 +180,13 @@ public class SystemNotificationChannels {
                 context.getString(R.string.notification_channel_usb),
                 NotificationManager.IMPORTANCE_MIN);
         channelsList.add(usb);
+
+        final NotificationChannel usbPrompt = new NotificationChannel(
+                USB_PROMPT,
+                context.getString(R.string.notification_channel_usb_prompt),
+                NotificationManager.IMPORTANCE_HIGH);
+        usbPrompt.setSound(null, null);
+        channelsList.add(usbPrompt);
 
         NotificationChannel foregroundChannel = new NotificationChannel(
                 FOREGROUND_SERVICE,

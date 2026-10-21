@@ -325,6 +325,11 @@
     <string name="notification_channel_alerts" msgid="5070241039583668427">"Uyarılar"</string>
     <string name="notification_channel_retail_mode" msgid="3732239154256431213">"Mağaza demo"</string>
     <string name="notification_channel_usb" msgid="1528280969406244896">"USB bağlantısı"</string>
+    <string name="notification_channel_usb_prompt">"USB bağlantı seçimi"</string>
+    <string name="usb_prompt_title">"USB ne için kullanılsın?"</string>
+    <string name="usb_prompt_message">"Bilgisayara bağlandı. Seçene kadar yalnızca şarj."</string>
+    <string name="usb_prompt_file_transfer">"Dosya aktarımı"</string>
+    <string name="usb_prompt_charge_only">"Yalnızca şarj"</string>
     <string name="notification_channel_heavy_weight_app" msgid="17455756500828043">"Uygulama çalışıyor"</string>
     <string name="notification_channel_foreground_service" msgid="7102189948158885178">"Pil kullanan uygulamalar"</string>
     <string name="notification_channel_accessibility_magnification" msgid="1707913872219798098">"Büyütme"</string>

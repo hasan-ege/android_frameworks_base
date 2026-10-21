@@ -1432,6 +1432,7 @@ public class UsbDeviceManager implements ActivityTaskManagerInternal.ScreenObser
 
                     updateUsbNotification(false);
                     updateAdbNotification(false);
+                    updateUsbPrompt();
                     if (mBootCompleted) {
                         updateUsbStateBroadcastIfNeeded(getAppliedFunctions(mCurrentFunctions));
                     }
@@ -1948,6 +1949,87 @@ public class UsbDeviceManager implements ActivityTaskManagerInternal.ScreenObser
         protected boolean isAdbEnabled() {
             return LocalServices.getService(AdbManagerInternal.class)
                     .isAdbEnabled(AdbTransportType.USB);
+        }
+
+        // ---- "Use USB for" (metroid): asked once per connection to a computer ----
+
+        private static final String ACTION_USB_PROMPT = "com.android.server.usb.action.USB_PROMPT";
+        private static final String EXTRA_USB_PROMPT_CHOICE = "choice";
+        private static final String USB_PROMPT_TAG = "usb_prompt";
+        private boolean mUsbPromptShown;
+        private boolean mUsbPromptReceiverRegistered;
+
+        private final BroadcastReceiver mUsbPromptReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if ("mtp".equals(intent.getStringExtra(EXTRA_USB_PROMPT_CHOICE))) {
+                    mUsbDeviceManager.setCurrentFunctions(UsbManager.FUNCTION_MTP,
+                            sUsbOperationCount.incrementAndGet());
+                }
+                cancelUsbPrompt();
+            }
+        };
+
+        private void cancelUsbPrompt() {
+            if (mNotificationManager != null) {
+                mNotificationManager.cancelAsUser(USB_PROMPT_TAG, 1, UserHandle.ALL);
+            }
+        }
+
+        /**
+         * Plugged into a computer (the link is configured, which a wall charger never does) while
+         * USB is only charging: ask what it is for, once per connection.
+         */
+        protected void updateUsbPrompt() {
+            if (!mConnected) {
+                if (mUsbPromptShown) cancelUsbPrompt();
+                mUsbPromptShown = false;
+                return;
+            }
+            if (mUsbPromptShown && mCurrentFunctions != UsbManager.FUNCTION_NONE) {
+                cancelUsbPrompt(); // a mode was picked some other way
+                return;
+            }
+            if (mUsbPromptShown || !mConfigured || !mBootCompleted || mNotificationManager == null
+                    || mCurrentFunctions != UsbManager.FUNCTION_NONE || mHostConnected
+                    || mSourcePower) {
+                return;
+            }
+            if (!mUsbPromptReceiverRegistered) {
+                mContext.registerReceiver(mUsbPromptReceiver, new IntentFilter(ACTION_USB_PROMPT),
+                        null, this, Context.RECEIVER_NOT_EXPORTED);
+                mUsbPromptReceiverRegistered = true;
+            }
+            Resources r = mContext.getResources();
+            Intent details = Intent.makeRestartActivityTask(new ComponentName("com.android.settings",
+                    "com.android.settings.Settings$UsbDetailsActivity"));
+            PendingIntent open = PendingIntent.getActivityAsUser(mContext, 0, details,
+                    PendingIntent.FLAG_IMMUTABLE, null, UserHandle.CURRENT);
+            PendingIntent mtp = PendingIntent.getBroadcast(mContext, 1,
+                    new Intent(ACTION_USB_PROMPT).setPackage("android")
+                            .putExtra(EXTRA_USB_PROMPT_CHOICE, "mtp"),
+                    PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+            PendingIntent charge = PendingIntent.getBroadcast(mContext, 2,
+                    new Intent(ACTION_USB_PROMPT).setPackage("android")
+                            .putExtra(EXTRA_USB_PROMPT_CHOICE, "charge"),
+                    PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+            Notification n = new Notification.Builder(mContext, SystemNotificationChannels.USB_PROMPT)
+                    .setSmallIcon(com.android.internal.R.drawable.stat_sys_data_usb)
+                    .setColor(mContext.getColor(
+                            com.android.internal.R.color.system_notification_accent_color))
+                    .setContentTitle(r.getText(com.android.internal.R.string.usb_prompt_title))
+                    .setContentText(r.getText(com.android.internal.R.string.usb_prompt_message))
+                    .setContentIntent(open)
+                    .setAutoCancel(true)
+                    .setCategory(Notification.CATEGORY_SYSTEM)
+                    .setVisibility(Notification.VISIBILITY_PUBLIC)
+                    .addAction(new Notification.Action.Builder(null, r.getText(
+                            com.android.internal.R.string.usb_prompt_file_transfer), mtp).build())
+                    .addAction(new Notification.Action.Builder(null, r.getText(
+                            com.android.internal.R.string.usb_prompt_charge_only), charge).build())
+                    .build();
+            mNotificationManager.notifyAsUser(USB_PROMPT_TAG, 1, n, UserHandle.ALL);
+            mUsbPromptShown = true;
         }
 
         protected void updateAdbNotification(boolean force) {

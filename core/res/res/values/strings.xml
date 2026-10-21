@@ -945,6 +945,13 @@
 
     <!-- Text shown when viewing channel settings for notifications related to a usb connection -->
     <string name="notification_channel_usb">USB connection</string>
+    <!-- Notification channel for the question asked when the phone is plugged into a computer. -->
+    <string name="notification_channel_usb_prompt">USB connection choice</string>
+    <!-- Heads-up notification when plugged into a computer: what USB should be used for. -->
+    <string name="usb_prompt_title">Use USB for</string>
+    <string name="usb_prompt_message">Connected to a computer. Charging only until you choose.</string>
+    <string name="usb_prompt_file_transfer">File transfer</string>
+    <string name="usb_prompt_charge_only">Charging only</string>
 
     <!-- Text shown when viewing channel settings for notification about a heavy-weight app
          currently running.
